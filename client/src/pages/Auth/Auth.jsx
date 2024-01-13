@@ -1,127 +1,175 @@
 import React, { useState } from "react";
 import "./Auth.css";
-import Logo from "../../img/logo.png";
-import { logIn, signUp } from "../../actions/AuthActions.js";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { Button } from "antd";
+import { Button, Form, Input, message as notice } from "antd";
+import * as AuthApi from "../../api/AuthRequests";
 
 const Auth = () => {
-  const initialState = {
-    firstname: "",
-    lastname: "",
-    username: "",
-    password: "",
-    confirmpass: "",
-  };
-  const loading = useSelector((state) => state.authReducer.loading);
+  const [messageApi, contextHolder] = notice.useMessage();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [isSignUp, setIsSignUp] = useState(false);
 
-  const [data, setData] = useState(initialState);
-
   const [confirmPass, setConfirmPass] = useState(true);
 
-  // const dispatch = useDispatch()
+  const [form] = Form.useForm();
 
-  // Reset Form
   const resetForm = () => {
-    setData(initialState);
-    setConfirmPass(confirmPass);
+    form.resetFields();
   };
 
-  // handle Change in input
-  const handleChange = (e) => {
-    setData({ ...data, [e.target.name]: e.target.value });
-  };
-
-  // Form Submission
-  const handleSubmit = (e) => {
-    setConfirmPass(true);
-    e.preventDefault();
+  const onFinish = async (values) => {
+    dispatch({ type: "AUTH_START" });
     if (isSignUp) {
-      data.password === data.confirmpass
-        ? dispatch(signUp(data, navigate))
-        : setConfirmPass(false);
+      try {
+        const { data } = await AuthApi.signUp(values);
+        dispatch({ type: "AUTH_SUCCESS", data: data });
+        messageApi.success("Đăng ký tài khoản thành công");
+        navigate("../home", { replace: true });
+      } catch (error) {
+        messageApi.info(error.response.data.message);
+        dispatch({ type: "AUTH_FAIL" });
+      }
     } else {
-      dispatch(logIn(data, navigate));
+      try {
+        const { data } = await AuthApi.logIn(values);
+        dispatch({ type: "AUTH_SUCCESS", data: data });
+        messageApi.success("Đăng nhập thành công");
+        navigate("../home", { replace: true });
+      } catch (error) {
+        dispatch({ type: "AUTH_FAIL" });
+        messageApi.info("Sai tài khoản hoặc mật khẩu");
+      }
     }
+  };
+
+  const onFinishFailed = (errorInfo) => {
+    console.log("Failed:", errorInfo);
   };
 
   return (
     <div className="Auth">
-      <div className="a-right">
-        <form className="infoForm authForm" onSubmit={handleSubmit}>
-          <h3>{isSignUp ? "Register" : "Login"}</h3>
+      {contextHolder}
+      <div className="a-right" style={{ width: "600px" }}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={onFinish}
+          onFinishFailed={onFinishFailed}
+          className="authForm form"
+          style={{ width: "100%" }}
+        >
+          <h3 style={{ fontSize: "28px", textAlign: "center" }}>
+            {isSignUp ? "Register" : "Login"}
+          </h3>
           {isSignUp && (
-            <div>
-              <input
-                required
-                type="text"
-                placeholder="First Name"
-                className="infoInput"
+            <div style={{ display: "flex", gap: "1rem" }}>
+              <Form.Item
+                label="First name"
                 name="firstname"
-                value={data.firstname}
-                onChange={handleChange}
-              />
-              <input
-                required
-                type="text"
-                placeholder="Last Name"
-                className="infoInput"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please input your first name!",
+                  },
+                ]}
+              >
+                <Input />
+              </Form.Item>
+              <Form.Item
+                label="Last name"
                 name="lastname"
-                value={data.lastname}
-                onChange={handleChange}
-              />
+                rules={[
+                  {
+                    required: true,
+                    message: "Please input your last name!",
+                  },
+                ]}
+              >
+                <Input />
+              </Form.Item>
             </div>
           )}
+          <Form.Item
+            label="Username"
+            name="username"
+            rules={[
+              {
+                required: true,
+                message: "Please input your username!",
+              },
+            ]}
+          >
+            <Input />
+          </Form.Item>
 
-          <div>
-            <input
-              required
-              type="text"
-              placeholder="Username"
-              className="infoInput"
-              name="username"
-              value={data.username}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <input
-              required
-              type="password"
-              className="infoInput"
-              placeholder="Password"
+          <div style={{ display: "flex", gap: "1rem" }}>
+            <Form.Item
+              label="Password"
               name="password"
-              value={data.password}
-              onChange={handleChange}
-            />
+              rules={[
+                {
+                  required: true,
+                  message: "Please input your password!",
+                },
+                {
+                  min: 8,
+                  message: "Password has at least 8 characters!",
+                },
+                {
+                  max: 24,
+                  message: "Password has a maximum of 24 characters!",
+                },
+              ]}
+            >
+              <Input.Password />
+            </Form.Item>
             {isSignUp && (
-              <input
-                required
-                type="password"
-                className="infoInput"
+              <Form.Item
+                label="Confirm Password"
                 name="confirmpass"
-                placeholder="Confirm Password"
-                onChange={handleChange}
-              />
+                dependencies={['password']}
+                rules={[
+                  {
+                    required: true,
+                    message: "Please input confirm password!",
+                  },
+                  {
+                    min: 8,
+                    message: "Password has at least 8 characters!",
+                  },
+                  {
+                    max: 24,
+                    message: "Password has a maximum of 24 characters!",
+                  },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue('password') === value) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(new Error('The new password that you entered do not match!'));
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password />
+              </Form.Item>
             )}
           </div>
 
-          <span
+          <div
             style={{
-              color: "red",
-              fontSize: "12px",
-              alignSelf: "flex-end",
-              marginRight: "5px",
-              display: confirmPass ? "none" : "block",
+              display: "flex",
+              gap: "1rem",
+              justifyContent: "center",
+              flexDirection: "column",
+              marginTop: "20px",
             }}
           >
-            *Confirm password is not same
-          </span>
-          <div>
+            <Button type="primary" htmlType="submit">
+              Log in
+            </Button>
             <span
               style={{
                 fontSize: "12px",
@@ -137,11 +185,8 @@ const Auth = () => {
                 ? "Already have an account Login"
                 : "Don't have an account Sign up"}
             </span>
-            <Button type="primary" loading={loading} htmlType="submit">
-              {loading ? "Loading..." : isSignUp ? "SignUp" : "Login"}
-            </Button>
           </div>
-        </form>
+        </Form>
       </div>
     </div>
   );

@@ -13,8 +13,6 @@
   justify-content: center;
 }
 
-
-
 /* left side */
 .a-left{
     gap: 2rem;
@@ -62,4 +60,7 @@
     width: 100%;
     align-items: center;
     justify-content: center;
+}
+.authForm .ant-form-item-row, .ant-form-item {
+  width: 100% !important;
 }

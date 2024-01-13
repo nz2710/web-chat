@@ -29,15 +29,15 @@ export const getAllUsers = async (req, res) => {
 
     if (freeWord) {
       queryString = {
-        $or: [{
-          firstname: {
-            $regex: req.query.freeWord, $options: 'i'
+        $or: [
+          { firstname: { $regex: freeWord, $options: 'i' } }, 
+          { lastname: { $regex: freeWord, $options: 'i' } },
+          { $and: [
+              { firstname: { $regex: new RegExp(freeWord.split(' ')[0], 'i') } }, 
+              { lastname: { $regex: new RegExp(freeWord.split(' ')[1], 'i') } }
+            ]
           }
-        }, {
-          lastname: {
-            $regex: req.query.freeWord, $options: 'i'
-          }
-        }]
+        ]
       }
     };
     
